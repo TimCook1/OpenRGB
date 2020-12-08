@@ -1,4 +1,5 @@
 #include "OpenRGBDialog2.h"
+#include "PluginLoader.h"
 #include "OpenRGBDevicePage.h"
 #include "OpenRGBDeviceInfoPage.h"
 #include "OpenRGBServerInfoPage.h"
@@ -233,7 +234,7 @@ OpenRGBDialog2::OpenRGBDialog2(QWidget *parent) : QMainWindow(parent), ui(new Op
     trayIcon->setContextMenu(trayIconMenu);
     trayIcon->show();
 
-#ifdef _WIN32
+    #ifdef _WIN32
     /*-------------------------------------------------*\
     | Apply dark theme on Windows if configured         |
     \*-------------------------------------------------*/
@@ -247,7 +248,7 @@ OpenRGBDialog2::OpenRGBDialog2(QWidget *parent) : QMainWindow(parent), ui(new Op
         darkTheme.open(QFile::ReadOnly);
         setStyleSheet(darkTheme.readAll());
     }
-#endif
+    #endif
 
     /*-----------------------------------------------------*\
     | Update the profile list                               |
@@ -286,6 +287,21 @@ OpenRGBDialog2::OpenRGBDialog2(QWidget *parent) : QMainWindow(parent), ui(new Op
     if(ShowI2CTools)
     {
         AddI2CToolsPage();
+    }
+    /*------------------------------*\
+    | Add the various plugins tabs   |
+    \*------------------------------*/
+    PluginManager *PManager = new PluginManager;
+    PManager->ScanAndLoadPlugins();
+    if (PManager->ActivePlugins.size() > 0)
+    {
+        for (int i = 0; i < int(PManager->ActivePlugins.size()); i++)
+        {
+            /*---------------------------------------------------------------------------*\
+            | Start by getting location and then placing the widget where it needs to go  |
+            \*---------------------------------------------------------------------------*/
+            OpenRGBDialog2::AddPluginTab(PManager,i);
+        }
     }
 }
 
@@ -356,6 +372,76 @@ void OpenRGBDialog2::AddSupportedDevicesPage()
     }
 
     ui->SettingsTabBar->tabBar()->setTabButton(ui->SettingsTabBar->tabBar()->count() - 1, QTabBar::LeftSide, SupportedTabLabel);
+}
+
+void OpenRGBDialog2::AddPluginTab(PluginManager *PManager,int PluginIndex)
+{
+    /*--------------------------*\
+    | Create Label for the Tab   |
+    \*--------------------------*/
+
+    PManager->ActivePlugins[PluginIndex]->PInfo = PManager->ActivePlugins[PluginIndex]->DefineNeeded();
+
+    json PluginSettings = ResourceManager::get()->GetSettingsManager()->GetSettings(PManager->ActivePlugins[PluginIndex]->PInfo.SettingName);
+
+    PManager->ActivePlugins[PluginIndex]->PInfo = PManager->ActivePlugins[PluginIndex]->init(PluginSettings,OpenRGBDialog2::IsDarkTheme(), ResourceManager::get());
+
+    QLabel *PluginTabLabel = new QLabel;
+    if (PManager->ActivePlugins[PluginIndex]->PInfo.HasCustom)
+    {
+        PluginTabLabel = PManager->ActivePlugins[PluginIndex]->PInfo.PluginLabel;
+    }
+    else
+    {
+        QLabel *TabLabelText = PManager->ActivePlugins[PluginIndex]->PInfo.PluginLabel;
+        QString NewTabLabelText = TabLabelText->text();
+        QString PluginLabelString = "<html><table><tr><td width='30'><img src='";
+        PluginLabelString += ":/plugin";
+        if (IsDarkTheme()) PluginLabelString += "_dark";
+        PluginLabelString+= ".png' height='16' width='16'></td><td>" + NewTabLabelText + "</td></tr></table></html>";
+        PluginTabLabel->setText(PluginLabelString);
+
+        PluginTabLabel->setIndent(20);
+        if(IsDarkTheme())
+        {
+            PluginTabLabel->setGeometry(0, 25, 200, 50);
+        }
+        else
+        {
+            PluginTabLabel->setGeometry(0, 0, 200, 25);
+        }
+    }
+
+    std::string Location = PManager->ActivePlugins[PluginIndex]->PInfo.PluginLoca;
+
+    if (Location == "InfoTab")
+    {
+        QWidget *NewPluginTab = new QWidget;
+        NewPluginTab = PManager->ActivePlugins[PluginIndex]->CreateGUI(NewPluginTab);
+        ui->InformationTabBar->addTab(NewPluginTab," ");
+
+        ui->InformationTabBar->tabBar()->setTabButton((ui->InformationTabBar->count() - 1),QTabBar::LeftSide , PluginTabLabel);
+    }
+    else if (Location == "DeviceTab")
+    {
+        QWidget *NewPluginTab = new QWidget;
+        NewPluginTab = PManager->ActivePlugins[PluginIndex]->CreateGUI(NewPluginTab);
+        ui->DevicesTabBar->addTab(NewPluginTab," ");
+
+        ui->InformationTabBar->tabBar()->setTabButton((ui->InformationTabBar->count() - 1),QTabBar::LeftSide , PluginTabLabel);
+    }
+    else if (Location == "TopTabBar")
+    {
+        QWidget *NewPluginTab = new QWidget;
+        NewPluginTab = PManager->ActivePlugins[PluginIndex]->CreateGUI(NewPluginTab);
+        ui->DevicesTabBar->addTab(NewPluginTab," ");
+
+        ui->MainTabBar->addTab(NewPluginTab,QString().fromStdString(PManager->ActivePlugins[PluginIndex]->PInfo.PluginName));
+    }
+    else
+    {
+        std::cout << (PManager->ActivePlugins[PluginIndex]->PInfo.PluginName + " Is broken\nNo valid location specified");
+    }
 }
 
 void OpenRGBDialog2::AddI2CToolsPage()
@@ -934,6 +1020,7 @@ void Ui::OpenRGBDialog2::SetDetectionViewState(bool detection_showing)
         ui->ProfileBox->setVisible(true);
     }
 }
+
 void Ui::OpenRGBDialog2::on_ButtonRescan_clicked()
 {
     SetDetectionViewState(true);

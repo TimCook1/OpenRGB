@@ -23,6 +23,7 @@
 #include "ProfileManager.h"
 #include "RGBController.h"
 #include "SettingsManager.h"
+#include "ResourceManagerInterface.h"
 
 #define HID_INTERFACE_ANY   -1
 #define HID_USAGE_ANY       -1
@@ -50,7 +51,7 @@ typedef void (*DeviceListChangeCallback)(void *);
 typedef void (*DetectionProgressCallback)(void *);
 typedef void (*I2CBusListChangeCallback)(void *);
 
-class ResourceManager
+class ResourceManager: public ResourceManagerInterface
 {
 public:
     static ResourceManager *get();
@@ -110,7 +111,7 @@ public:
 private:
     void DetectDevicesThreadFunction();
 
-    static std::unique_ptr<ResourceManager>     instance;
+    static ResourceManager     *instance;
 
     /*-------------------------------------------------------------------------------------*\
     | Detection enabled flag                                                                |

@@ -112,8 +112,10 @@ HEADERS +=                                                                      
     NetworkClient.h                                                                             \
     NetworkProtocol.h                                                                           \
     NetworkServer.h                                                                             \
+    PluginLoader.h                                                                              \
     ProfileManager.h                                                                            \
     ResourceManager.h                                                                           \
+    ResourceManagerInterface.h                                                                  \
     SettingsManager.h                                                                           \
     Detector.h                                                                                  \
     DeviceDetector.h                                                                            \
@@ -282,7 +284,6 @@ HEADERS +=                                                                      
     RGBController/RGBController_Dummy.h                                                         \
     RGBController/RGBController_Network.h                                                       \
 
-
 SOURCES +=                                                                                      \
     dependencies/dmiinfo.cpp                                                                    \
     dependencies/ColorWheel/ColorWheel.cpp                                                      \
@@ -291,6 +292,7 @@ SOURCES +=                                                                      
     cli.cpp                                                                                     \
     NetworkClient.cpp                                                                           \
     NetworkServer.cpp                                                                           \
+    PluginLoader.cpp                                                                            \
     ProfileManager.cpp                                                                          \
     ResourceManager.cpp                                                                         \
     SettingsManager.cpp                                                                         \
